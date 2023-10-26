@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model attachment {
+  attId  Int    @id @default(autoincrement())
+  name   String @db.VarChar(255)
+  srcUrl String @db.VarChar(255)
+  taskId Int?
+  task   task?  @relation(fields: [taskId], references: [taskId], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model notification {
+  notId                              Int     @id @default(autoincrement())
+  taskId                             Int?
+  receiverId                         Int?
+  senderId                           Int?
+  senderStatus                       String? @db.VarChar(255)
+  receiverStatus                     String? @db.VarChar(255)
+  clone                              String? @default("clone") @db.VarChar(255)
+  user_notification_receiverIdTouser user?   @relation("notification_receiverIdTouser", fields: [receiverId], references: [userId], onDelete: NoAction, onUpdate: NoAction)
+  user_notification_senderIdTouser   user?   @relation("notification_senderIdTouser", fields: [senderId], references: [userId], onDelete: NoAction, onUpdate: NoAction)
+  task                               task?   @relation(fields: [taskId], references: [taskId], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model priority {
+  priorityId Int    @id @default(autoincrement())
+  name       String @db.VarChar(255)
+  color      String @db.VarChar(255)
+  task       task[]
+}
+
+model program {
+  progId                 Int                      @id @default(autoincrement())
+  name                   String                   @db.VarChar(255)
+  subject_program_join   subject_program_join[]
+  usersubjectprogramjoin usersubjectprogramjoin[]
+}
+
+model reminder {
+  remId  Int    @id @default(autoincrement())
+  days   Int
+  status String @db.VarChar(255)
+  taskId Int    @unique(map: "unique_taskid")
+  task   task   @relation(fields: [taskId], references: [taskId], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model status {
+  statusId Int    @id @default(autoincrement())
+  name     String @db.VarChar(255)
+  color    String @db.VarChar(45)
+  task     task[]
+
+  @@index([statusId], map: "Status_StatusId_Index")
+}
+
+model subject {
+  subId                  Int                      @id @default(autoincrement())
+  name                   String                   @db.VarChar(255)
+  subject_program_join   subject_program_join[]
+  task                   task[]
+  usersubjectprogramjoin usersubjectprogramjoin[]
+}
+
+model subject_program_join {
+  subId   Int     @default(autoincrement())
+  progId  Int     @default(autoincrement())
+  program program @relation(fields: [progId], references: [progId], onDelete: NoAction, onUpdate: NoAction, map: "subject_program_join_progid_fkey")
+  subject subject @relation(fields: [subId], references: [subId], onDelete: NoAction, onUpdate: NoAction, map: "subject_program_join_subid_fkey")
+
+  @@id([subId, progId])
+}
+
+model task {
+  taskId       Int            @id @default(autoincrement())
+  title        String         @db.VarChar(255)
+  description  String?
+  created_at   DateTime?      @default(now()) @db.Timestamp(6)
+  statusId     Int?
+  typeId       Int?
+  priorityId   Int?
+  due_date     DateTime?      @db.Timestamptz(6)
+  subId        Int?
+  userId       Int?
+  attachment   attachment[]
+  notification notification[]
+  reminder     reminder?
+  priority     priority?      @relation(fields: [priorityId], references: [priorityId], onDelete: NoAction, onUpdate: NoAction)
+  status       status?        @relation(fields: [statusId], references: [statusId], onDelete: NoAction, onUpdate: NoAction)
+  subject      subject?       @relation(fields: [subId], references: [subId], onDelete: NoAction, onUpdate: NoAction)
+  type         type?          @relation(fields: [typeId], references: [typeId], onDelete: NoAction, onUpdate: NoAction)
+  user         user?          @relation(fields: [userId], references: [userId], onDelete: NoAction, onUpdate: NoAction)
+  task_state   task_state[]
+}
+
+model task_state {
+  sId         Int       @id @default(autoincrement())
+  from        String    @db.VarChar(255)
+  to          String    @db.VarChar(255)
+  change_date DateTime? @default(now()) @db.Timestamp(6)
+  taskId      Int?
+  task        task?     @relation(fields: [taskId], references: [taskId], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model type {
+  typeId Int    @id @default(autoincrement())
+  name   String @db.VarChar(255)
+  task   task[]
+
+  @@index([typeId], map: "Type_TypeId_Index")
+}
+
+model user {
+  userId                                     Int                      @id @default(autoincrement())
+  name                                       String                   @db.VarChar(255)
+  email                                      String                   @unique(map: "User_Email_Index") @db.VarChar(255)
+  password                                   String                   @db.VarChar(255)
+  profile                                    String                   @db.VarChar(25)
+  notification_notification_receiverIdTouser notification[]           @relation("notification_receiverIdTouser")
+  notification_notification_senderIdTouser   notification[]           @relation("notification_senderIdTouser")
+  task                                       task[]
+  usersubjectprogramjoin                     usersubjectprogramjoin[]
+
+  @@index([userId], map: "User_UserId_Index")
+}
+
+model usersubjectprogramjoin {
+  userId  Int
+  subId   Int
+  progId  Int
+  program program @relation(fields: [progId], references: [progId], onDelete: NoAction, onUpdate: NoAction)
+  subject subject @relation(fields: [subId], references: [subId], onDelete: NoAction, onUpdate: NoAction)
+  user    user    @relation(fields: [userId], references: [userId], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([userId, subId, progId])
+}
+
+model usubprog {
+  userId Int
+  subId  Int
+  progId Int
+
+  @@id([subId, progId])
+}
